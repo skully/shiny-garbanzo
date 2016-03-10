@@ -9,7 +9,7 @@ def config():
         with open(".config", "r") as confFile:
             for confLine in confFile:
                 listOfConf = confLine.replace(" ", "").split(":",1)
-                confDict.update({listOfConf[0]:listOfConf[1:]})
+                confDict.update({listOfConf[0]:listOfConf[1]})
 
     except IOError:
         print "No .config file! Let's make one!"
@@ -23,12 +23,14 @@ def config():
     
     return confDict
 
-def correctConfig():
-        
+def correctConfig(key = "", *val):
+    #key: value
     confDict = dict()
-    #correct dict refresh
-
-    #reparse
+    
+    confFile = open(".config", "w")
+    confFile.write( key+": "+val[0])
+    
+    confDict.update({key:val[0]})
 
     return confDict;
 
@@ -50,34 +52,56 @@ def getTransferList(oauth):
     parsed = json.loads(result.text)
     return parsed
 
+def uploadFile(oauth, filename):
+    #Problem w/ the solution: loads the complete file into the memory, no feedback for the user
+    #Look for other solution!
+    payload = {'oauth_token':oauth}
+    try:
+        files = {'file':open(filename,'rb')}
+        url = 'https://upload.put.io/v2/files/upload'
+        
+        result = requests.post(url, params=payload, files= files )
+
+        parsed = json.loads(result.text)
+        files['file'].close;
+        return parsed
+    except NameError:
+        return None    
+
+
+def getInfos(oauth,id,attr):
+    payload = {'oauth_token':oauth}
+
+    result = requests.get("https://api.put.io/v2/files/"+id, params=payload)
+    parsed = json.loads(result.text)
+    if parsed['status'] ==  'OK':
+        return parsed['file'][attr]
+    else:
+        return "ERR"
+
+
+def dowloadFile(oauth, id, feedbackfunc = None, *feedbackargs):
+    payload = {'oauth_token':oauth}
+    url = "https://api.put.io/v2/files/" + id + "/download"
+
+    try:
+        local_filename = getInfos(oauth, id, 'name')
+    except requests.exceptions.ConnectionError:
+        return False
+
+    r= requests.get(url, params = payload,stream = True)
+    with open(local_filename, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=1024): 
+            if chunk: 
+                f.write(chunk)
+                f.flush()
+                if feedbackfunc != None:
+                    feedbackfunc(*feedbackargs)
+    return True
+   
 
 
 
-
-confDict = config()
-print confDict
-
-
-
-try:
-
-    #answ = raw_input("mi kone ha vona: ")
-    
-    #parsed = getFileList(confDict["oauth"],0)   
-    #print str(parsed['files']).replace(" u'"," \n'") 
-
-    #attr = raw_input("id: ")
-    #parsed = getFileList(attr)
-    #print '\n'
-
-    #print len(parsed['files'])
-    print "wtf"
-
-    parsed = getTransferList(confDict["oauth"])
-
-    print str(parsed['transfers']).replace(" u'"," \n'") 
-except KeyError:
-    confDict = correctConfig()
 
 
 
