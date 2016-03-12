@@ -1,4 +1,4 @@
-import json, requests
+import json, requests, os
 
 
 def config():
@@ -69,40 +69,66 @@ def uploadFile(oauth, filename):
         return None    
 
 
-def getInfos(oauth,id,attr):
+def getInfos(oauth,id):
     payload = {'oauth_token':oauth}
-
-    result = requests.get("https://api.put.io/v2/files/"+id, params=payload)
+    result = requests.get("https://api.put.io/v2/files/"+ str(id) , params=payload)
     parsed = json.loads(result.text)
     if parsed['status'] ==  'OK':
-        return parsed['file'][attr]
+        return parsed['file']
     else:
         return "ERR"
 
-
-def dowloadFile(oauth, id, feedbackfunc = None, *feedbackargs):
+#return must be -1 or size of file
+def downloadFile(oauth, id, path=".", feedbackfunc = None, *feedbackargs):
     payload = {'oauth_token':oauth}
-    url = "https://api.put.io/v2/files/" + id + "/download"
+    url = "https://api.put.io/v2/files/" + str(id) + "/download"
 
     try:
-        local_filename = getInfos(oauth, id, 'name')
+        local_file= getInfos(oauth, id)
     except requests.exceptions.ConnectionError:
-        return False
+        return -1
+    #ha van mar ilyen nevu fajl, append id!
+
+    
+    if os.path.exists((path+"/"+local_file['name'])):
+        local_filename = local_file['name'] +"_"+ str(id)
+    else:
+        local_filename = local_file['name'] 
+
 
     r= requests.get(url, params = payload,stream = True)
-    with open(local_filename, 'wb') as f:
+    with open((path+"/"+local_filename), 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024): 
             if chunk: 
                 f.write(chunk)
                 f.flush()
                 if feedbackfunc != None:
                     feedbackfunc(*feedbackargs)
-    return True
-   
+                    print local_file
+    return getInfos(oauth,id)['size']
 
 
+def downloadFolder(oauth, id, path, folderfeedback = None, feedbackfunc = None, *feedbackargs):
+    payload = {'oauth_token':oauth}
+    fileList = getFileList(oauth, id)
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+    for item in fileList["files"]:         
+       
+        print item
+        if item['content_type'] == 'application/x-directory': 
+            print "folder"
+            if not os.path.exists(path + '/' + item['name']):
+                os.mkdir(path + '/' + item['name'])
+            downloadFolder(oauth, item["id"], path + '/' + item['name'])
+        else:
+            print "file"
+            b =  downloadFile(oauth, item['id'], path, feedbackfunc, feedbackargs)
+            print b
 
 
+    
 
 
 
