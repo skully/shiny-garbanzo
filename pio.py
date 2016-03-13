@@ -105,7 +105,7 @@ def downloadFile(oauth, id, path=".", feedbackfunc = None, *feedbackargs):
                 if feedbackfunc != None:
                     feedbackfunc(*feedbackargs)
                     print local_file
-    return getInfos(oauth,id)['size']
+    return local_file['size']
 
 
 def downloadFolder(oauth, id, path, folderfeedback = None, feedbackfunc = None, *feedbackargs):
