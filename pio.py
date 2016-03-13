@@ -87,8 +87,6 @@ def downloadFile(oauth, id, path=".", feedbackfunc = None, *feedbackargs):
         local_file= getInfos(oauth, id)
     except requests.exceptions.ConnectionError:
         return -1
-    #ha van mar ilyen nevu fajl, append id!
-
     
     if os.path.exists((path+"/"+local_file['name'])):
         local_filename = local_file['name'] +"_"+ str(id)
@@ -105,6 +103,9 @@ def downloadFile(oauth, id, path=".", feedbackfunc = None, *feedbackargs):
                 if feedbackfunc != None:
                     feedbackfunc(*feedbackargs)
                     print local_file
+    
+    
+    
     return local_file['size']
 
 
