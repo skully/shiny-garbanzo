@@ -131,8 +131,27 @@ def downloadFolder(oauth, id, path, folderfeedback = None, feedbackfunc = None, 
 
     
 
+def deleteFiles(oauth, ids):
+    if type(ids) is list:
+        payload = {'oauth_token':oauth,
+                    "file_ids": ",".join(ids)};
+    else:
+        payload = {'oauth_token':oauth,
+                    "file_id": str(ids)};
+    url = "https://api.put.io/v2/files/delete"                
+    result = requests.post(url, data=payload)
+    parsed = json.loads(result.text)
+    if parsed["status"] == "OK":
+        return True
+    else:
+        return False
 
 
+
+    
+    
+
+    
 
 
 
