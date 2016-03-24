@@ -5,7 +5,7 @@ import json, requests, os
 class pi:
 
     def __init__(self):
-        pass
+        self.confDict = self.config()
 
     def config(self):
         
@@ -41,8 +41,8 @@ class pi:
         return confDict;
     
     
-    def getFileList(self,oauth,id):
-        payload = {'oauth_token':oauth}
+    def getFileList(self,id):
+        payload = {'oauth_token':self.confDict['oauth']}
         if id == 0:
             result = requests.get("https://api.put.io/v2/files/list", params=payload)
         else:
@@ -53,7 +53,7 @@ class pi:
     
     
     def getTransferList(self,oauth):
-        payload = {'oauth_token':oauth}
+        payload = {'oauth_token': self.confDict['oauth']}
         result = requests.get("https://api.put.io/v2/transfers/list", params=payload)
         parsed = json.loads(result.text)
         return parsed
@@ -61,7 +61,7 @@ class pi:
     def uploadFile(self,oauth, filename):
         #Problem w/ the solution: loads the complete file into the memory, no feedback for the user
         #Look for other solution!
-        payload = {'oauth_token':oauth}
+        payload = {'oauth_token':self.confDict['oauth']}
         try:
             files = {'file':open(filename,'rb')}
             url = 'https://upload.put.io/v2/files/upload'
@@ -75,8 +75,8 @@ class pi:
             return None    
     
     
-    def getInfos(self,oauth,id):
-        payload = {'oauth_token':oauth}
+    def getInfos(self,id):
+        payload = {'oauth_token':self.confDict['oauth']}
         result = requests.get("https://api.put.io/v2/files/"+ str(id) , params=payload)
         parsed = json.loads(result.text)
         if parsed['status'] ==  'OK':
@@ -85,12 +85,12 @@ class pi:
             return "ERR"
     
     #return must be -1 or size of file
-    def downloadFile(self,oauth, id, path=".", feedbackfunc = None, *feedbackargs):
-        payload = {'oauth_token':oauth}
+    def downloadFile(self, id, path=".", feedbackfunc = None, *feedbackargs):
+        payload = {'oauth_token':self.confDict['oauth']}
         url = "https://api.put.io/v2/files/" + str(id) + "/download"
     
         try:
-            local_file= getInfos(oauth, id)
+            local_file= self.getInfos(id)
         except requests.exceptions.ConnectionError:
             return -1
         
@@ -108,41 +108,33 @@ class pi:
                     f.flush()
                     if feedbackfunc != None:
                         feedbackfunc(*feedbackargs)
-                        print local_file
-        
-        
         
         return local_file['size']
     
     
-    def downloadFolder(self,oauth, id, path, folderfeedback = None, feedbackfunc = None, *feedbackargs):
-        payload = {'oauth_token':oauth}
-        fileList = getFileList(oauth, id)
+    def downloadFolder(self,id, path, folderfeedback = None, feedbackfunc = None, *feedbackargs):
+        payload = {'oauth_token':self.confDict['oauth']}
+        fileList = self.getFileList( id)
         if not os.path.exists(path):
             os.mkdir(path)
     
         for item in fileList["files"]:         
-           
-            print item
+            print item["name"] 
             if item['content_type'] == 'application/x-directory': 
-                print "folder"
                 if not os.path.exists(path + '/' + item['name']):
                     os.mkdir(path + '/' + item['name'])
-                downloadFolder(oauth, item["id"], path + '/' + item['name'])
+                self.downloadFolder(id=str(item["id"]), path=path + '/' + item['name'])
             else:
-                print "file"
-                b =  downloadFile(oauth, item['id'], path, feedbackfunc, feedbackargs)
-                print b
-    
+                b =  self.downloadFile( item['id'], path, feedbackfunc, feedbackargs)
     
         
     
-    def deleteFiles(self,oauth, ids):
+    def deleteFiles(self,ids):
         if type(ids) is list:
-            payload = {'oauth_token':oauth,
+            payload = {'oauth_token':self.confDict['oauth'],
                         "file_ids": ",".join(ids)};
         else:
-            payload = {'oauth_token':oauth,
+            payload = {'oauth_token':self.confDict['oauth'],
                         "file_id": str(ids)};
         url = "https://api.put.io/v2/files/delete"                
         result = requests.post(url, data=payload)
